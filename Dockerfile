@@ -11,8 +11,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
-# Install Chrome for Puppeteer explicitly
-RUN npx puppeteer browsers install chrome@stable
+# Install a managed Chrome build Puppeteer can use
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
+ENV PUPPETEER_SKIP_DOWNLOAD=false
+RUN npx --yes @puppeteer/browsers install chrome@stable
 
 COPY server.js ./
 
