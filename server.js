@@ -10,7 +10,7 @@ const ST_PASSWORD = process.env.ST_PASSWORD || "YOUR_SENSOR_TOWER_PASSWORD";
 async function launchBrowser() {
   return puppeteer.launch({
     headless: "new",
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    executablePath: puppeteer.executablePath(),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
