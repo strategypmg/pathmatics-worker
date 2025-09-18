@@ -1,3 +1,4 @@
+
 import express from "express";
 import puppeteer from "puppeteer";
 
@@ -10,6 +11,7 @@ const ST_PASSWORD = process.env.ST_PASSWORD || "YOUR_SENSOR_TOWER_PASSWORD";
 async function launchBrowser() {
   return puppeteer.launch({
     headless: "new",
+    executablePath: puppeteer.executablePath(),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
