@@ -11,8 +11,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
-# 👇 Add this line: download a managed Chrome for Puppeteer
-RUN npx puppeteer browsers install chrome
+# Install Chrome for Puppeteer explicitly
+RUN npx puppeteer browsers install chrome@stable
 
 COPY server.js ./
 
