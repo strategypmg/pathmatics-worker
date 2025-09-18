@@ -12,11 +12,11 @@ COPY package.json package-lock.json* ./
 
 RUN npm install --omit=dev
 
-# Install a managed Chrome build Puppeteer can use
+# Use a consistent cache dir and install Chrome there
 ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 ENV PUPPETEER_SKIP_DOWNLOAD=false
-RUN npx --yes @puppeteer/browsers install chrome@127.0.6533.88
-ENV PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome
+RUN mkdir -p /app/.cache/puppeteer
+RUN npx --yes @puppeteer/browsers install chrome@127.0.6533.88 --path=/app/.cache/puppeteer --platform=linux --arch=x64
 
 COPY server.js ./
 
