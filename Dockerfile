@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Install Chromium dependencies for Puppeteer
+# Chromium deps for Puppeteer
 RUN apt-get update && apt-get install -y \
     wget ca-certificates fonts-liberation libasound2 libatk1.0-0 libatk-bridge2.0-0 \
     libatspi2.0-0 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
+
+# 👇 Add this line: download a managed Chrome for Puppeteer
+RUN npx puppeteer browsers install chrome
+
 COPY server.js ./
 
 ENV NODE_ENV=production
