@@ -25,7 +25,7 @@ async function loginIfNeeded(page) {
   const url = page.url();
   const looksLikeLogin =
     /login|sign[_-]?in|users\/sign_in/i.test(url) ||
-    (await page.$('input[type="password"]'));
+    !!(await page.$('input[type="password"]'));
   if (!looksLikeLogin) return;
 
   const emailSel = 'input[type="email"], #email, input[name="email"], input#user_email';
@@ -41,40 +41,42 @@ async function loginIfNeeded(page) {
   ]);
 }
 
-async function fetchWithRetry(page, url, attempts = 2) {
-  let lastErr;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      // Do the fetch inside the page context so cookies are included
-      const resp = await page.evaluate(async (downloadUrl) => {
-        const r = await fetch(downloadUrl, { credentials: "include", headers: { "Referer": "https://app.sensortower.com/pathmatics/overview" } });
-        const status = r.status;
-        const ok = r.ok;
-        if (!ok) {
-          // Clone BEFORE reading text to avoid consuming the main stream
-          let snippet = "";
-          try { snippet = (await r.clone().text()).slice(0, 400); } catch (_) {}
-          return { ok: false, status, textSnap: snippet };
-        }
-        const cd = r.headers.get("content-disposition") || "";
-        const ct = r.headers.get("content-type") || "application/octet-stream";
-        const m = cd.match(/filename="?([^";]+)"?/i);
-        const name = m ? m[1] : "pathmatics_report.csv";
-        const ab = await r.arrayBuffer(); // read body ONCE on success
-        const arr = Array.from(new Uint8Array(ab));
-        return { ok: true, status, name, ct, arr };
-      }, url);
+function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-      return resp;
-    } catch (e) {
-      lastErr = e;
-    }
-    // ensure login and retry
-    await ensureLoggedIn(page);
-    await delay(500);
-  }
-  throw lastErr || new Error("fetchWithRetry: unknown error");
+async function ensureLoggedIn(page) {
+  // Touch an authenticated page, then run loginIfNeeded
+  try {
+    await page.goto('https://app.sensortower.com/pathmatics/overview', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  } catch (_) {}
+  await loginIfNeeded(page);
 }
+
+app.get('/whoami', async (req, res) => {
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const page = await browser.newPage();
+    await ensureLoggedIn(page);
+
+    const detectedEmail = await page.evaluate(() => {
+      const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+      const html = document.documentElement?.innerHTML || '';
+      const mail = document.querySelector('a[href^="mailto:"]');
+      if (mail && mail.href) {
+        const m1 = mail.href.match(EMAIL_RE); if (m1 && m1[0]) return m1[0];
+      }
+      const m = html.match(EMAIL_RE); return m && m[0] ? m[0] : '';
+    });
+
+    console.log('[whoami] detectedEmail', detectedEmail || '(none)');
+    res.json({ detectedEmail: detectedEmail || '' });
+  } catch (e) {
+    console.error('[whoami] error', e);
+    res.status(500).json({ error: String(e) });
+  } finally {
+    try { if (browser) await browser.close(); } catch (_) {}
+  }
+});
 
 app.post("/run", async (req, res) => {
   const { link } = req.body || {};
